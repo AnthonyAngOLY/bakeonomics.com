@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useTable } from '../lib/data'
 import { UNITS, UNIT_KEYS } from '../lib/units'
 import { useSettings } from '../lib/settings.jsx'
@@ -18,6 +19,24 @@ export default function Ingredients() {
   const [draft, setDraft] = useState({})
 
   const nextColor = CHIP_COLORS[rows.length % CHIP_COLORS.length]
+
+  // Topbar search sends users here as `/app/ingredients?highlight=<id>`.
+  // Scroll the matching <tr> into view and flash it briefly once loaded.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const highlightId = searchParams.get('highlight')
+  const rowRefs = useRef({})
+  useEffect(() => {
+    if (!highlightId || loading) return
+    const el = rowRefs.current[highlightId]
+    if (!el) return
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    el.classList.add('row-flash')
+    const t = setTimeout(() => {
+      el.classList.remove('row-flash')
+      setSearchParams(prev => { const next = new URLSearchParams(prev); next.delete('highlight'); return next }, { replace: true })
+    }, 1800)
+    return () => clearTimeout(t)
+  }, [highlightId, loading, rows.length])
 
   function startEdit(i) {
     setEditingId(i.id)
@@ -137,7 +156,7 @@ export default function Ingredients() {
 
             if (isEditing) {
               return (
-                <tr key={i.id} className="editing" style={{background:'#fafaff'}}>
+                <tr key={i.id} ref={el => { rowRefs.current[i.id] = el }} className="editing" style={{background:'#fafaff'}}>
                   <td>
                     <div className="row-name">
                       {chip}
@@ -165,7 +184,7 @@ export default function Ingredients() {
             }
 
             return (
-              <tr key={i.id}>
+              <tr key={i.id} ref={el => { rowRefs.current[i.id] = el }}>
                 <td>
                   <div className="row-name">
                     {chip}

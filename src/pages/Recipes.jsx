@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useTable } from '../lib/data'
 import { supabase } from '../lib/supabase'
 import { useSettings } from '../lib/settings.jsx'
@@ -26,6 +27,25 @@ export default function Recipes() {
 
   const [contentRecipeId, setContentRecipeId] = useState(null)
   const contentRecipe = rows.find(r => r.id === contentRecipeId) || null
+
+  // Topbar search sends users here as `/app/recipes?highlight=<id>`. Once the
+  // rows have loaded, scroll the matching <tr> into view and flash it briefly.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const highlightId = searchParams.get('highlight')
+  const rowRefs = useRef({})
+  useEffect(() => {
+    if (!highlightId || loading) return
+    const el = rowRefs.current[highlightId]
+    if (!el) return
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    el.classList.add('row-flash')
+    const t = setTimeout(() => {
+      el.classList.remove('row-flash')
+      // Clean up the URL so a refresh doesn't re-flash
+      setSearchParams(prev => { const next = new URLSearchParams(prev); next.delete('highlight'); return next }, { replace: true })
+    }, 1800)
+    return () => clearTimeout(t)
+  }, [highlightId, loading, rows.length])
 
   function startEdit(r) {
     setEditingId(r.id)
@@ -144,7 +164,7 @@ export default function Recipes() {
 
             if (isEditing) {
               return (
-                <tr key={r.id} style={{background:'#fafaff'}}>
+                <tr key={r.id} ref={el => { rowRefs.current[r.id] = el }} style={{background:'#fafaff'}}>
                   <td>
                     <div className="row-name">
                       {chip}
@@ -166,7 +186,7 @@ export default function Recipes() {
             }
 
             return (
-              <tr key={r.id}>
+              <tr key={r.id} ref={el => { rowRefs.current[r.id] = el }}>
                 <td>
                   <div className="row-name">
                     {chip}

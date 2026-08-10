@@ -189,8 +189,53 @@ aside{ background:var(--panel); border-right:1px solid var(--line); padding:22px
    TOPBAR + CONTENT
    ============================================================ */
 .topbar{ background:var(--panel); border-radius:var(--radius-lg); margin:18px 28px 0; padding:10px 18px; display:flex; align-items:center; gap:14px; box-shadow:var(--shadow); }
-.search{ display:flex; align-items:center; gap:10px; flex:1; color:var(--muted); min-width:0; }
+.search{ display:flex; align-items:center; gap:10px; flex:1; color:var(--muted); min-width:0; position:relative; }
 .search input{ border:none; outline:none; background:none; font-family:inherit; font-size:14px; color:var(--ink); width:100%; }
+
+/* Spotlight-style search dropdown */
+.search-dropdown{
+  position:absolute; top:calc(100% + 10px); left:0; right:0;
+  background:var(--panel); border:1px solid var(--line);
+  border-radius:12px; box-shadow:0 12px 36px rgba(50,51,74,0.16);
+  padding:6px; max-height:min(60vh, 460px); overflow-y:auto;
+  z-index:100;
+}
+.search-section{ padding:4px 0; }
+.search-section + .search-section{ border-top:1px solid var(--line); margin-top:4px; padding-top:8px; }
+.search-section-label{
+  font-size:10px; font-weight:700; letter-spacing:0.14em;
+  text-transform:uppercase; color:var(--muted);
+  padding:4px 10px 6px;
+}
+.search-row{
+  display:flex; align-items:center; gap:10px; width:100%;
+  padding:8px 10px; border:none; background:none; border-radius:8px;
+  font:inherit; font-size:13.5px; color:var(--ink); text-align:left;
+  cursor:pointer;
+}
+.search-row.active{ background:var(--accent-soft); color:var(--accent-dark); }
+.search-row-name{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.search-row-kind{
+  font-size:11px; color:var(--muted); font-weight:600;
+  text-transform:uppercase; letter-spacing:0.06em; flex-shrink:0;
+}
+.search-row.active .search-row-kind{ color:var(--accent-dark); opacity:0.7; }
+.search-empty{
+  padding:14px 12px; font-size:13px; color:var(--muted); text-align:center;
+}
+.search-hint{
+  padding:8px 10px 4px; margin-top:2px; border-top:1px solid var(--line);
+  font-size:10.5px; color:var(--muted); text-align:center; letter-spacing:0.03em;
+}
+
+/* Row-highlight flash — applied to a matching table row when the page lands
+   with ?highlight=<id> in the URL (Recipes / Ingredients pages read this
+   query param and add the class briefly). */
+@keyframes row-flash {
+  0%   { background: var(--accent-soft); }
+  100% { background: transparent; }
+}
+tr.row-flash > td, tr.row-flash > th { animation: row-flash 1.6s ease-out; }
 .top-icons{ display:flex; align-items:center; gap:6px; }
 .icn-btn{ width:36px; height:36px; display:flex; align-items:center; justify-content:center; border-radius:8px; color:var(--ink-soft); cursor:pointer; position:relative; text-decoration:none; }
 .icn-btn:hover{ background:#f6f5fa; color:var(--ink); }
