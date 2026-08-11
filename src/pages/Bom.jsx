@@ -7,6 +7,27 @@ import { Icon } from '../lib/icons.jsx'
 import Chip from '../components/Chip.jsx'
 import RecipePicker from '../components/RecipePicker'
 
+// ---------------------------------------------------------------------------
+// Yield-override storage
+// ---------------------------------------------------------------------------
+// The BOM has a "planning" yield-modifier that scales displayed quantities +
+// costs while leaving the stored recipe-native qty untouched. Overrides
+// persist per-recipe in localStorage so a page reload keeps whatever batch
+// size you were planning. Clearing the input or pressing Default removes
+// the entry.
+const OVERRIDE_KEY = (recipeId) => `bom:yield-override:${recipeId}`
+function readOverride(recipeId) {
+  if (!recipeId || typeof window === 'undefined') return ''
+  try { return window.localStorage.getItem(OVERRIDE_KEY(recipeId)) ?? '' } catch { return '' }
+}
+function writeOverride(recipeId, value) {
+  if (!recipeId || typeof window === 'undefined') return
+  try {
+    if (value === '' || value == null) window.localStorage.removeItem(OVERRIDE_KEY(recipeId))
+    else window.localStorage.setItem(OVERRIDE_KEY(recipeId), String(value))
+  } catch { /* localStorage blocked — override becomes session-only, no harm */ }
+}
+
 export default function Bom() {
   const { settings } = useSettings()
   const { rows: recipes } = useTable('recipes', 'name')
@@ -17,6 +38,41 @@ export default function Bom() {
 
   const { lines, addLine, updateLine, removeLine } = useBomLines(recipeId)
   const ingById = useMemo(() => Object.fromEntries(ingredients.map(i => [i.id, i])), [ingredients])
+
+  // Active recipe + yield override --------------------------------------------
+  const recipe = recipes.find(r => r.id === recipeId) || null
+  const defaultYield = Math.max(Number(recipe?.yield_portions) || 1, 1)
+  const [yieldInput, setYieldInput] = useState('')
+
+  // Load persisted override whenever the active recipe changes
+  useEffect(() => {
+    setYieldInput(readOverride(recipeId))
+  }, [recipeId])
+
+  const activeYield = (() => {
+    const parsed = parseFloat(yieldInput)
+    return parsed > 0 ? parsed : defaultYield
+  })()
+  const scaleFactor = activeYield / defaultYield
+  const isScaled = Math.abs(scaleFactor - 1) > 1e-6
+
+  function onYieldChange(next) {
+    setYieldInput(next)
+    // Only persist meaningful overrides (parseable, positive, different from
+    // the recipe default). Everything else clears the override so a reload
+    // shows the recipe's native yield.
+    const parsed = parseFloat(next)
+    if (parsed > 0 && Math.abs(parsed - defaultYield) > 1e-6) {
+      writeOverride(recipeId, parsed)
+    } else {
+      writeOverride(recipeId, '')
+    }
+  }
+
+  function resetYield() {
+    setYieldInput('')
+    writeOverride(recipeId, '')
+  }
 
   const [f, setF] = useState({ ingredient_id:'', qty:'', unit:'g' })
   useEffect(() => {
@@ -54,8 +110,46 @@ export default function Bom() {
       <RecipePicker recipes={recipes} value={recipeId} onChange={setRecipeId}/>
       <div className="panel">
         <div className="panel-head">
-          <div><h3>Recipe BOM</h3><p className="sub">Use whatever unit the recipe is written in — conversion happens against the ingredient's purchase unit.</p></div>
+          <div>
+            <h3>Recipe BOM</h3>
+            <p className="sub">
+              Recipe yields <b>{defaultYield}</b>. Use whatever unit the recipe is written in —
+              conversion happens against the ingredient's purchase unit.
+            </p>
+          </div>
         </div>
+
+        {/* Yield modifier — scales displayed qty + cost without touching stored values */}
+        <div className={`bom-yield-bar${isScaled ? ' is-scaled' : ''}`}>
+          <div className="bom-yield-field">
+            <label htmlFor="bom-yield-input">Batch yield</label>
+            <input
+              id="bom-yield-input"
+              type="number"
+              min="0"
+              step="0.01"
+              value={yieldInput}
+              onChange={e => onYieldChange(e.target.value)}
+              placeholder={String(defaultYield)}
+            />
+            <span className="bom-yield-native">of {defaultYield} default</span>
+          </div>
+          <div className="bom-yield-scale">
+            {isScaled
+              ? <span className="pill bridge">×{scaleFactor.toFixed(2).replace(/\.?0+$/, '')} preview</span>
+              : <span className="pill ok">at recipe scale</span>}
+          </div>
+          <button
+            type="button"
+            className="ghost"
+            onClick={resetYield}
+            disabled={!isScaled && yieldInput === ''}
+            title="Restore the recipe's default yield"
+          >
+            Reset to default
+          </button>
+        </div>
+
         <div className="conv-box">
           <div className="conv-icon"><Icon name="arrows" size={16}/></div>
           <div>
@@ -95,14 +189,25 @@ export default function Bom() {
                 <button className="ghost" onClick={() => removeLine(l.id)}>Remove</button>
               </div>
             )
-            const r = lineCost(ing, l.qty, l.unit)
+            // Display qty + cost scale by the yield modifier. The stored qty
+            // and unit in bom_lines never change; the multiplier is a display
+            // preview only. Add / Edit still enter recipe-native values.
+            const displayQty = l.qty * scaleFactor
+            const r = lineCost(ing, displayQty, l.unit)
             const badge = !r.ok ? <span className="pill err">no conversion</span>
               : r.bridged ? <span className="pill bridge">via density</span>
               : <span className="pill ok">direct</span>
+            // Neat qty rendering: keep ints as ints, otherwise up to 3dp trimmed
+            const qtyText = Number.isInteger(displayQty)
+              ? String(displayQty)
+              : displayQty.toFixed(3).replace(/\.?0+$/, '')
             return (
               <div key={l.id} className="bom-line">
                 <div className="row-name"><Chip item={ing} size={28}/><strong>{ing.name}</strong></div>
-                <div className="num">{l.qty} {UNITS[l.unit]?.label}</div>
+                <div className="num">
+                  {qtyText} {UNITS[l.unit]?.label}
+                  {isScaled && <span className="bom-line-native"> ({l.qty} × {scaleFactor.toFixed(2).replace(/\.?0+$/, '')})</span>}
+                </div>
                 <div>{badge}</div>
                 <div className="num"><strong>{r.ok ? money(r.cost, settings.currency) : '—'}</strong></div>
                 <div className="action-cell">
@@ -125,6 +230,12 @@ export default function Bom() {
           <div/>
           <button className="primary" onClick={add}>+ Add</button>
         </div>
+        {isScaled && (
+          <p className="bom-yield-hint">
+            You're viewing a ×{scaleFactor.toFixed(2).replace(/\.?0+$/, '')} preview.
+            Add / Edit still enter recipe-scale quantities — the multiplier is display only.
+          </p>
+        )}
       </div>
     </>
   )

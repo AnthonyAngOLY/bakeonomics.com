@@ -55,7 +55,11 @@ export default function RecipeContentDrawer({
 
   async function save() {
     setSaving(true)
-    await onSave(draft)
+    // Strip empty method rows and trim whitespace right before persisting —
+    // during editing we tolerate blank rows so newly-added steps stay visible
+    // and typable.
+    const payload = { ...draft, method: commitMethod(draft.method) }
+    await onSave(payload)
     setSaving(false)
     setDirty(false)
   }
@@ -333,21 +337,24 @@ function MethodEditor({ value, onChange }) {
     })
   }, [value])
 
+  // Pass items through raw during editing. The old cleanup() also filtered
+  // blank rows, which meant addStep({step:''}) got stripped before it could
+  // render — "+ Add step" appeared broken. Cleanup now runs only at save time
+  // (see commitMethod at the bottom of this file); mid-edit blanks are fine.
   function update(i, patch) {
-    const next = items.map((it, idx) => idx === i ? { ...it, ...patch } : it)
-    onChange(cleanup(next))
+    onChange(items.map((it, idx) => idx === i ? { ...it, ...patch } : it))
   }
   function addStep() {
-    onChange(cleanup([...items, { step: '' }]))
+    onChange([...items, { step: '', group: '' }])
   }
   function removeAt(i) {
-    onChange(cleanup(items.filter((_, idx) => idx !== i)))
+    onChange(items.filter((_, idx) => idx !== i))
   }
   function moveUp(i)   { if (i > 0) swap(i, i - 1) }
   function moveDown(i) { if (i < items.length - 1) swap(i, i + 1) }
   function swap(a, b) {
     const next = [...items]; [next[a], next[b]] = [next[b], next[a]]
-    onChange(cleanup(next))
+    onChange(next)
   }
 
   return (
@@ -394,9 +401,15 @@ function MethodEditor({ value, onChange }) {
   )
 }
 
-function cleanup(items) {
+/**
+ * Save-time normaliser: trim whitespace, drop rows with no step AND no group,
+ * strip empty `group` keys so the DB doesn't accumulate junk. Called from the
+ * drawer's save() so mid-edit blanks stay visible while the user is typing.
+ */
+export function commitMethod(items) {
+  if (!Array.isArray(items)) return []
   return items
-    .map(it => ({ step: (it.step || '').trim(), group: (it.group || '').trim() }))
+    .map(it => ({ step: (it?.step || '').trim(), group: (it?.group || '').trim() }))
     .filter(it => it.step || it.group)
     .map(it => it.group ? it : { step: it.step })
 }

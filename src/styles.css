@@ -354,6 +354,24 @@ button.edit:hover{ border-color:var(--accent); background:var(--accent-soft); }
 
 .bom-line{ display:grid; grid-template-columns:2fr 1fr 1fr 1fr auto; gap:12px; align-items:center; padding:12px 14px; border:1px solid var(--line); border-radius:10px; margin-bottom:8px; background:#fff; transition:all 0.15s; }
 .bom-line:hover{ border-color:#dedafc; background:#fafaff; }
+.bom-line-native{ color:var(--muted); font-weight:400; font-size:11px; margin-left:4px; }
+
+/* Yield modifier bar — sits between the conversion box and the ingredient list */
+.bom-yield-bar{
+  display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+  padding:12px 14px; margin-bottom:14px;
+  background:#fbfaff; border:1px solid var(--line); border-radius:10px;
+}
+.bom-yield-bar.is-scaled{ background:#f4f2ff; border-color:#dedafc; }
+.bom-yield-field{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.bom-yield-field label{ font-size:12px; font-weight:600; color:var(--ink-soft); text-transform:uppercase; letter-spacing:0.08em; }
+.bom-yield-field input{ width:88px; text-align:right; }
+.bom-yield-native{ font-size:12px; color:var(--muted); font-style:italic; }
+.bom-yield-scale{ margin-left:auto; }
+.bom-yield-hint{
+  margin:12px 0 0; padding:8px 12px; font-size:12px; color:var(--ink-soft);
+  background:#faf9ff; border-left:3px solid var(--accent); border-radius:4px;
+}
 .recipe-select{ margin-bottom:18px; max-width:380px; }
 
 .conv-box{ background:linear-gradient(135deg,#f4f2ff,#eeecff); border:1px solid #dedafc; border-radius:10px; padding:14px 16px; font-size:12.5px; color:var(--ink-soft); margin-bottom:18px; display:flex; gap:12px; align-items:flex-start; }
