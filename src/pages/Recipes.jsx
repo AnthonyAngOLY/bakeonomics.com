@@ -132,7 +132,7 @@ export default function Recipes() {
           </p>
         </div>
       </div>
-      <table>
+      <table className="responsive-table">
         <thead>
           <tr>
             <th>Recipe</th>
@@ -164,16 +164,16 @@ export default function Recipes() {
 
             if (isEditing) {
               return (
-                <tr key={r.id} ref={el => { rowRefs.current[r.id] = el }} style={{background:'#fafaff'}}>
+                <tr key={r.id} ref={el => { rowRefs.current[r.id] = el }} className="editing" style={{background:'#fafaff'}}>
                   <td>
                     <div className="row-name">
                       {chip}
                       <input value={draft.name} onChange={e => setDraft({...draft, name: e.target.value})} style={{width:240}}/>
                     </div>
                   </td>
-                  <td><input value={draft.category} onChange={e => setDraft({...draft, category: e.target.value})} style={{width:130}} placeholder="Category"/></td>
-                  <td className="num"><input type="number" value={draft.yield_portions} onChange={e => setDraft({...draft, yield_portions: e.target.value})} style={{width:80, textAlign:'right'}}/></td>
-                  <td className="num"><input type="number" value={draft.target_food_cost_pct} onChange={e => setDraft({...draft, target_food_cost_pct: e.target.value})} style={{width:80, textAlign:'right'}}/></td>
+                  <td data-label="Category"><input value={draft.category} onChange={e => setDraft({...draft, category: e.target.value})} style={{width:130}} placeholder="Category"/></td>
+                  <td className="num" data-label="Yield"><input type="number" value={draft.yield_portions} onChange={e => setDraft({...draft, yield_portions: e.target.value})} style={{width:80, textAlign:'right'}}/></td>
+                  <td className="num" data-label="Target FC%"><input type="number" value={draft.target_food_cost_pct} onChange={e => setDraft({...draft, target_food_cost_pct: e.target.value})} style={{width:80, textAlign:'right'}}/></td>
                   <td/>
                   <td>
                     <div className="action-cell">
@@ -193,10 +193,10 @@ export default function Recipes() {
                     <strong>{r.name}</strong>
                   </div>
                 </td>
-                <td><span className="pill bridge">{r.category || '—'}</span></td>
-                <td className="num">{r.yield_portions}</td>
-                <td className="num">{r.target_food_cost_pct}%</td>
-                <td>
+                <td data-label="Category"><span className="pill bridge">{r.category || '—'}</span></td>
+                <td className="num" data-label="Yield">{r.yield_portions}</td>
+                <td className="num" data-label="Target FC%">{r.target_food_cost_pct}%</td>
+                <td data-label="Menu">
                   {r.show_in_menu === false
                     ? <span className="pill err">hidden</span>
                     : <span className="pill ok">visible</span>}
